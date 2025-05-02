@@ -37,32 +37,34 @@ fi
 INPUT_FILE=${FILE_LIST[$SLURM_ARRAY_TASK_ID-1]}
 
 # Run R script with the selected file
-python /storage/homefs/ha25g949/pannet_metabolism/scripts/parallelized/parallelized_leiden_clust.py \
+python /storage/homefs/ha25g949/pannet_metabolism/scripts/parallelized/spatial_metabolomics/parallelized_leiden_clust.py \
 "/storage/homefs/ha25g949/pannet_metabolism/parallel/rms/total/negative/frequency_0.1/peak_aligned_non_filtered/$INPUT_FILE" \
 "/storage/homefs/ha25g949/pannet_metabolism/parallel/rms/total/negative/frequency_0.1/leiden_clustering" \
 "$INPUT_FILE"
 
 
+mkdir -p "/storage/homefs/ha25g949/pannet_metabolism/parallel/rms/total/positive/frequency_0.1/leiden_clustering"
+cd "/storage/homefs/ha25g949/pannet_metabolism/parallel/rms/total/positive/frequency_0.1/peak_aligned_non_filtered"
 
+ # define the directory containing input files
+INPUT_DIR="/storage/homefs/ha25g949/pannet_metabolism/parallel/rms/total/positive/frequency_0.1/peak_aligned_non_filtered"
+ 
+ # Create a file list dynamically
+FILE_LIST=($(ls $INPUT_DIR/*.imzML | awk -F'/' '{print $NF}'))
+TOTAL_FILES=${#FILE_LIST[@]}
 
-# mkdir -p "/storage/homefs/ha25g949/pannet_metabolism/parallel/rms/total/positive/frequency_0.1/leiden_clustering"
-# 
-# # define the directory containing input files
-# INPUT_DIR="/storage/homefs/ha25g949/pannet_metabolism/parallel/rms/total/positive/frequency_0.1/peak_aligned_non_filtered"
-# 
-# # Create a file list dynamically
-# FILE_LIST=($(ls $INPUT_DIR/*.imzML | awk -F'/' '{print $NF}'))
-# TOTAL_FILES=${#FILE_LIST[@]}
-# 
-# # Check if SLURM_ARRAY_TASK_ID is within range
-# if [ "$SLURM_ARRAY_TASK_ID" -gt "$TOTAL_FILES" ]; then
-#     echo "Job index $SLURM_ARRAY_TASK_ID exceeds total file count ($TOTAL_FILES). Exiting."
-#     exit 1
-# fi
-# 
-# # Run R script with the selected file
-# python3 /storage/homefs/ha25g949/pannet_metabolism/scripts/parallelized/parallelized_leiden_clust.py \
-# "/storage/homefs/ha25g949/pannet_metabolism/parallel/rms/total/positive/frequency_0.1/peak_aligned_non_filtered/$INPUT_FILE" \
-# "/storage/homefs/ha25g949/pannet_metabolism/parallel/rms/total/positive/frequency_0.1/leiden_clustering" \
-# "$INPUT_FILE"
+# Check if SLURM_ARRAY_TASK_ID is within range
+if [ "$SLURM_ARRAY_TASK_ID" -gt "$TOTAL_FILES" ]; then
+    echo "Job index $SLURM_ARRAY_TASK_ID exceeds total file count ($TOTAL_FILES). Exiting."
+    exit 1
+fi
+
+# Select the file corresponding to this job array index
+INPUT_FILE=${FILE_LIST[$SLURM_ARRAY_TASK_ID-1]}
+
+# Run R script with the selected file
+python /storage/homefs/ha25g949/pannet_metabolism/scripts/parallelized/spatial_metabolomics/parallelized_leiden_clust.py \
+"/storage/homefs/ha25g949/pannet_metabolism/parallel/rms/total/positive/frequency_0.1/peak_aligned_non_filtered/$INPUT_FILE" \
+"/storage/homefs/ha25g949/pannet_metabolism/parallel/rms/total/positive/frequency_0.1/leiden_clustering" \
+"$INPUT_FILE"
 
