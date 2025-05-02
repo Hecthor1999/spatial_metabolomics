@@ -10,6 +10,8 @@ from scipy.sparse import csr_matrix
 from matplotlib.colors import to_rgb
 import anndata as ad
 from pyimzml.ImzMLParser import ImzMLParser
+from matplotlib.colors import rgb2hex
+
 
 def cluster_leiden(adata, n_iterations = 2, resolution = 0.5, spot_size = 1, show_plots = False, save_path = None, file_path = None):
     """
@@ -57,11 +59,18 @@ def cluster_leiden(adata, n_iterations = 2, resolution = 0.5, spot_size = 1, sho
             print("Failed to save image:", e)
 
         # Save CSV
+        cluster_colors = [rgb2hex(palette[i]) for i in cluster_labels]
+        rgb_colors = [palette[i] for i in cluster_labels]
+
+        # Save full cluster info
         cluster_df = pd.DataFrame({
-            "x": x,
-            "y": y,
-            "cluster": clusters
+            "x": x.astype(int),
+            "y": y.astype(int),
+            "cluster": clusters.astype(str),
+            "cluster_color": cluster_colors,
+            "RGB_color": rgb_colors
         })
+
         csv_file = os.path.join(save_path, f"{image_name}_leiden_clusters.csv")
         try:
             cluster_df.to_csv(csv_file, index=False)
