@@ -70,7 +70,7 @@ extra_args <- "10"
 
 mse <-  lapply(mse, function(data) {
     data %>%
-    normalize(method = "rms") %>%
+    normalize(method = "reference", feature = 283.2643) %>% # negative
     smooth(method = "sgolay") %>%
     reduceBaseline(method = baseline_red_meth, width=extra_args)
   }) %>%
@@ -163,7 +163,7 @@ reference_based_peak_pick <- lapply(mse, function(data) {
   }) %>% lapply(process)
 
 # write aligned data
-output_reference_based__path <- args[9]
+output_reference_based_peak_pick_path <- args[9]
 
 lapply(seq_along(reference_based_peak_pick), function(i) {
   file_name <- runNames(reference_based_peak_pick[[i]])
