@@ -1,6 +1,12 @@
 # This R script calculates the wassersteindistance by using the mwass.cpp file in /storage/homefs/ha25g949/pannet_metabolism/mwass.cpp
 # then it calcualtes the batch balanced k nearest neighbour graph using bbknnR, runs Leiden clustering on the graph and then visualizes both the full image and the PCOAs for all images in either negative or positive modes
 
+# arguments
+# -1 list of images to analyze
+# -2 output directory
+# -3 input directory
+# here I wanna avoid healthy tissue normal images 
+
 # Set library directory
 .libPaths("~/R/library")
 my_paths <- c(.libPaths()[1],"/storage/software/epyc2.9/software/R-bundle-CRAN/2024.11-foss-2024a",.libPaths()[2])
@@ -54,7 +60,11 @@ library(ggplot2)
 library(ape)
 library(cluster)
 
-data_dir = "/storage/research/igmp_grp_perren/raw_data_DESI_imaging/PanNET_Umara/lockmass_corrected"
+# command line arguments
+args <- commandArgs(trailingOnly = TRUE)
+
+# data directory
+data_dir <- args[3]
 
 # the meta data is required to match the image files from the different modes to the correct sample
 # This list is mainly hand curated 
@@ -243,13 +253,22 @@ library(igraph)
 #   img_names = vector of image names, same length as data_list
 #   HDI_neg_1k = list of SingleCellExperiment or Spatial objects with coordinates
 
-img_names = names(HDI_neg_1k)[c(1:31)]
+img_indices <- eval(parse(text = args[1]))
+img_names = names(HDI_neg_1k)[img_indices]
 
 data_list = lapply(img_names, function(nm) {
   tmp = HDI_neg_1k[[nm]]
   assay(tmp, "TIC") = t(t(assay(tmp, "counts")) / colSums(assay(tmp, "counts")))
   assay(tmp, "TIC")
 })
+
+# Remove any NULL entries (failed loads)
+HDI_neg_1k <- Filter(Negate(is.null), HDI_neg_1k)
+
+# Safety check
+if (length(HDI_neg_1k) == 0) {
+  stop("No valid HDI_neg_1k objects were loaded. Check your input files.")
+}
 
 # Combine all data into one big matrix
 all_data <- do.call(cbind, data_list)
@@ -326,7 +345,9 @@ cluster_colors <- setNames(
 # -----------------------------
 # PLOT RESULTS
 # -----------------------------
-if (!dir.exists("results")) dir.create("results")
+name_output_dir <- args[2]
+
+if (!dir.exists(name_output_dir)) dir.create(name_output_dir)
 
 for (idx in seq_along(img_names)) {
   nm <- img_names[idx]
@@ -350,7 +371,7 @@ for (idx in seq_along(img_names)) {
 
   print(p)
   ggsave(
-    filename = file.path("results", paste0(nm, "_bbknn_leiden_31_plot.png")),
+    filename = file.path(name_output_dir, paste0(nm, "_bbknn_leiden_31_plot.png")),
     plot = p, width = 6, height = 5, dpi = 300
   )
 }
@@ -384,6 +405,7 @@ my_colors <- cluster_colors
 # -----------------------------
 # PLOT PER-IMAGE PCOA
 # -----------------------------
+if (!dir.exists(name_output_dir)) dir.create(name_output_dir)
 for (nm in img_names) {
   tmp_df <- subset(pcoa_df, image == nm)
 
@@ -403,7 +425,7 @@ for (nm in img_names) {
 
   print(p)
   ggsave(
-    filename = file.path("results", paste0(nm, "bbknn_leiden_31_pcoa_plot.png")),
+    filename = file.path(name_output_dir, paste0(nm, "bbknn_leiden_31_pcoa_plot.png")),
     plot = p, width = 6, height = 5, dpi = 300
   )
 }
@@ -435,6 +457,7 @@ my_colors <- cluster_colors
 # -----------------------------
 # GLOBAL PCOA PLOT
 # -----------------------------
+if (!dir.exists(name_output_dir)) dir.create(name_output_dir)
 p_global <- ggplot(pcoa_df, aes(x = PCoA1, y = PCoA2, color = cluster)) +
   geom_point(size = 2, alpha = 0.8) +
   scale_color_manual(values = my_colors, drop = FALSE) +
@@ -454,7 +477,7 @@ print(p_global)
 
 # Save figure
 ggsave(
-  filename = file.path("results", "_bbknn_leiden_31_Global_PCoA_All_Images.png"),
+  filename = file.path(name_output_dir, "_bbknn_leiden_31_Global_PCoA_All_Images.png"),
   plot = p_global, width = 7, height = 6, dpi = 300
 )
 
